@@ -6,6 +6,9 @@ authors = ["Maximilian Jugl <Maximilian.Jugl@medizin.uni-leipzig.de>"]
 readme = "README.md"
 packages = [{ include = "project" }]
 
+[tool.poetry.scripts]
+kcsetup = "project.main:setup_keycloak"
+
 [tool.poetry.dependencies]
 python = "^3.11"
 python-keycloak = "^3.7.0"
