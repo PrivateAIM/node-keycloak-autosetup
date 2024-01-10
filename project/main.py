@@ -2,7 +2,7 @@ import json
 import logging
 
 import click
-from keycloak import KeycloakOpenIDConnection, KeycloakAdmin
+from keycloak import KeycloakOpenIDConnection, KeycloakAdmin, KeycloakOpenID
 
 
 @click.command()
@@ -25,7 +25,7 @@ def setup_keycloak(
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("kcsetup")
 
-    kc_oid = KeycloakOpenIDConnection(
+    kc_admin_oid = KeycloakOpenIDConnection(
         server_url=kc_server_url,
         username=kc_admin_username,
         password=kc_admin_password,
@@ -33,7 +33,7 @@ def setup_keycloak(
         verify=verify,
     )
 
-    kc_admin = KeycloakAdmin(connection=kc_oid)
+    kc_admin = KeycloakAdmin(connection=kc_admin_oid)
 
     # load realm payload
     with open(kc_realm_file, mode="r", encoding="utf-8") as f:
@@ -71,6 +71,19 @@ def setup_keycloak(
     assert kc_client["secret"] == kc_client_secret
 
     logger.info("Client successfully created")
+
+    kc_client_oid = KeycloakOpenID(
+        server_url=kc_server_url,
+        realm_name=realm_name,
+        client_id=kc_client_id,
+        client_secret_key=kc_client_secret,
+        verify=verify,
+    )
+
+    auth_token = kc_client_oid.token(grant_type="client_credentials")
+    assert auth_token is not None
+
+    logger.info("Authentication successful")
 
 
 if __name__ == "__main__":
