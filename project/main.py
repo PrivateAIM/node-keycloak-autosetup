@@ -9,11 +9,23 @@ from keycloak import KeycloakOpenIDConnection, KeycloakAdmin, KeycloakOpenID
 
 
 @click.command()
-@click.option("--kc-server-url", default="http://localhost:8080/")
-@click.option("--kc-master-realm-name", default="master")
-@click.option("--verify/--no-verify", default=True)
-@click.argument("kc_admin_username")
-@click.argument("kc_admin_password")
+@click.option(
+    "--kc-server-url",
+    default="http://localhost:8080/",
+    help="URL to Keycloak instance.",
+)
+@click.option(
+    "--kc-master-realm-name",
+    default="master",
+    help="Name of master realm within Keycloak.",
+)
+@click.option(
+    "--verify/--no-verify",
+    default=True,
+    help="Enable certificate validation for encrypted traffic.",
+)
+@click.argument("kc_admin_username", metavar="ADMIN_USERNAME")
+@click.argument("kc_admin_password", metavar="ADMIN_PASSWORD")
 def setup_keycloak(
     kc_admin_username: str,
     kc_admin_password: str,
