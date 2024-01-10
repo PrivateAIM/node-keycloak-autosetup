@@ -9,7 +9,7 @@
   "enabled": true,
   "alwaysDisplayInConsole": false,
   "clientAuthenticatorType": "client-secret",
-  "secret": "X8V2NMedGyfxSeBxVbOe2zdjAR25ZagV",
+  "secret": "{{ client_secret }}",
   "redirectUris": [
     "/*"
   ],
@@ -29,7 +29,7 @@
   "attributes": {
     "oidc.ciba.grant.enabled": "false",
     "oauth2.device.authorization.grant.enabled": "false",
-    "client.secret.creation.time": "1704890578",
+    "client.secret.creation.time": "{{ client_secret_creation_time }}",
     "backchannel.logout.session.required": "true",
     "backchannel.logout.revoke.offline.tokens": "false"
   },

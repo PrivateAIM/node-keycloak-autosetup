@@ -1,7 +1,10 @@
 import json
 import logging
+import secrets
+import time
 
 import click
+from jinja2 import Environment, PackageLoader, select_autoescape
 from keycloak import KeycloakOpenIDConnection, KeycloakAdmin, KeycloakOpenID
 
 
@@ -11,17 +14,19 @@ from keycloak import KeycloakOpenIDConnection, KeycloakAdmin, KeycloakOpenID
 @click.option("--verify/--no-verify", default=True)
 @click.argument("kc_admin_username")
 @click.argument("kc_admin_password")
-@click.argument("kc_realm_file")
-@click.argument("kc_client_file")
 def setup_keycloak(
     kc_admin_username: str,
     kc_admin_password: str,
-    kc_realm_file: str,
-    kc_client_file: str,
     kc_server_url: str,
     kc_master_realm_name: str,
     verify: bool,
 ) -> None:
+    # set up jinja env
+    env = Environment(
+        loader=PackageLoader("project"),
+        autoescape=select_autoescape(),
+    )
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("kcsetup")
 
@@ -36,8 +41,7 @@ def setup_keycloak(
     kc_admin = KeycloakAdmin(connection=kc_admin_oid)
 
     # load realm payload
-    with open(kc_realm_file, mode="r", encoding="utf-8") as f:
-        realm_payload = json.load(f)
+    realm_payload = json.loads(env.get_template("realm.json").render())
 
     realm_id = realm_payload["id"]
     realm_name = realm_payload["realm"]
@@ -56,8 +60,12 @@ def setup_keycloak(
     kc_admin.change_current_realm(realm_name)
 
     # load client payload
-    with open(kc_client_file, mode="r", encoding="utf-8") as f:
-        client_payload = json.load(f)
+    client_payload = json.loads(
+        env.get_template("client.json").render(
+            client_secret=secrets.token_urlsafe(24),  # creates 32 char url-safe secret
+            client_secret_creation_time=int(time.time()),
+        )
+    )
 
     kc_client_id = client_payload["clientId"]
     kc_client_secret = client_payload["secret"]
@@ -72,6 +80,7 @@ def setup_keycloak(
 
     logger.info("Client successfully created")
 
+    # check whether authentication works
     kc_client_oid = KeycloakOpenID(
         server_url=kc_server_url,
         realm_name=realm_name,
@@ -84,6 +93,16 @@ def setup_keycloak(
     assert auth_token is not None
 
     logger.info("Authentication successful")
+
+    print("")
+    print("=" * 64)
+    print("")
+    print(f"Realm: {realm_name}")
+    print(f"Client ID: {kc_client_id}")
+    print(f"Client Secret: {kc_client_secret}")
+    print("")
+    print("" * 64)
+    print("")
 
 
 if __name__ == "__main__":
