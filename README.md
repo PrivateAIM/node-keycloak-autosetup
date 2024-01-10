@@ -1,78 +1,59 @@
-# PrivateAIM Python Template
+# Keycloak development setup tool
 
-This repository serves as a template for Python-based repositories within the PrivateAIM project.
-It comes preconfigured with tools for testing, building, linting and formatting your Python code.
+This repository contains a tool for setting up Keycloak for FLAME node development purposes.
 
 ## Prerequisites
 
-[Poetry](https://python-poetry.org/) is the Python package manager of choice.
-[Follow the installation instructions](https://python-poetry.org/docs/) and make sure that Poetry is working on your
-machine.
+[Poetry](https://python-poetry.org/), [Docker](https://docs.docker.com/engine/install/)
+and [Docker Compose](https://docs.docker.com/compose/install/) must be installed and working.
 
-Using [PyCharm](https://www.jetbrains.com/pycharm/) as the primary IDE is not required, but heavily encouraged.
-The instructions in this document are mostly tailored towards PyCharm.
+## Installation
 
-## Project setup
-
-In GitHub, click on "Use this template", then "Create in a new repository".
-Enter the name of your repository and click on "Create repository".
-
-### With PyCharm
-
-Go to `Git > Clone…`.
-Enter the URL to the repository you just created and the directory you'd like to clone it to.
-Click on `Clone`.
-Confirm that you trust the project.
-PyCharm will then automatically set up a new Poetry environment with all configured dependencies for your repository.
-Open a terminal within PyCharm, then run `pre-commit install --install-hooks -t pre-commit -t commit-msg` to install the
-pre-commit hooks.
-
-### Manually
-
-Clone the repository.
-Open a terminal and navigate to the repository.
+Clone this repository.
+In a terminal, navigate to the repository's root directory.
 Run `poetry install`.
-This will create a new Poetry environment and install all dependencies.
-Run `poetry shell` to drop into the Poetry environment.
-Finally, run `pre-commit install --install-hooks -t pre-commit -t commit-msg` to install the pre-commit hooks.
 
-## Project structure
+## Usage
 
-The [project directory](./project) is the location to put all your Python code.
-Rename it to the actual name of your code project and modify the `packages` property in `pyproject.toml` accordingly.
+In a terminal, navigate to the [docker subdirectory](./docker) and run `docker compose up -d`.
+This will start a development instance of Keycloak on port 8080 of your machine.
+Next, change to the root directory and run `poetry shell`.
+You can then run `kcsetup --help` to view the tool's options.
 
-The [tests directory](./tests) is where all your tests go.
-Running `pytest` on the command line will automatically pick up any tests inside that directory and execute them.
-Refer to the pytest documentation for more information on how to write your tests and get the most out of pytest.
+```
+$ kcsetup --help
+Usage: kcsetup [OPTIONS] ADMIN_USERNAME ADMIN_PASSWORD
 
-The Poetry environment comes with these pre-installed dependencies:
+Options:
+  --kc-server-url TEXT         URL to Keycloak instance.
+  --kc-master-realm-name TEXT  Name of master realm within Keycloak.
+  --verify / --no-verify       Enable certificate validation for encrypted
+                               traffic.
+  --help                       Show this message and exit.
+```
 
-- [pre-commit](https://pre-commit.com/) for pre-commit hooks
-- [pytest](https://docs.pytest.org/en/7.4.x/) for testing
-- [ruff](https://github.com/astral-sh/ruff) for code linting and formatting
+The Keycloak server URL and master realm name are set to http://localhost:8080 and "master" by default.
+If you use the Compose file in this repository to start Keycloak, these options do not need to be configured.
 
-Furthermore, thanks to pre-commit, the following hooks are installed by default:
+You can then invoke the setup tool with the admin username and password.
+The tool will create a new realm with service accounts enabled, as well as a client within that realm with its own
+unique secret.
 
-- [out-of-the-box pre-commit hooks](https://github.com/pre-commit/pre-commit-hooks)
-    - `check-added-large-files`: prevents large files from being committed
-    - `check-toml`: checks TOML files for syntax errors
-    - `check-yaml`: checks YAML files for syntax errors
-    - `end-of-file-fixer`: checks for single newlines at the end of a file
-    - `trailing-whitespace`: removes trailing whitespaces from files
-- [ruff hook](https://github.com/astral-sh/ruff-pre-commit): lints and auto-formats files using ruff
-- [conventional commits hook](https://github.com/compilerla/conventional-pre-commit): checks commit messages against
-  the [conventional commits spec](https://www.conventionalcommits.org/en/v1.0.0/)
+```
+$ kcsetup admin admin
+INFO:kcsetup:Read realm `flame` (78af1a45-369d-4336-adc9-d2e85e6e64f0) payload
+INFO:kcsetup:Realm successfully created
+INFO:kcsetup:Read client `flame-client`
+INFO:kcsetup:Client successfully created
+INFO:kcsetup:Authentication successful
 
-If any of the pre-commit hooks fail, you will have to resolve all conflicts that have been pointed out, re-add all your
-previously staged files and commit again.
+================================================================
 
-## Linting and auto-formatting
+Realm: flame
+Client ID: flame-client
+Client Secret: yxZpcsCNinhPqW_k9RZkxnfzuCXLzx9B
 
-[Ruff](https://github.com/astral-sh/ruff) is the Python linter and formatter of choice.
-It is highly recommended to install
-the [Ruff plugin from the JetBrains Marketplace](https://plugins.jetbrains.com/plugin/20574-ruff).
-Once installed, go to `File > Settings…`, then navigate to `Tools > Ruff`.
-Make sure that "Run ruff when Reformat Code" is checked and that `Project Specific > ruff executable` points to the Ruff
-executable within your virtual environment.
-Next, go to `Tools > Actions on Save` and check "Reformat code".
-This will automatically run Ruff on a file every time it is saved.
+================================================================
+```
+
+You can use the client ID and secret with a regular OAuth client credentials grant to authenticate against Keycloak.
