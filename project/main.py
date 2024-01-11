@@ -161,7 +161,7 @@ def setup_keycloak(
         print(f"Client #{i + 1} Secret: {kc_client_secret}")
 
     print("")
-    print("" * 64)
+    print("=" * 64)
     print("")
 
 
