@@ -92,3 +92,22 @@ Client #2 Secret: OjQi3Z7WNVLpYprHG7Stog3eQ_gilZdb
 
 ================================================================
 ```
+
+The tokens returned by Keycloak after successful authentication have the following shape.
+
+```json
+{
+  "access_token": "eyJhbGc...",
+  "expires_in": 300,
+  "refresh_expires_in": 0,
+  "token_type": "Bearer",
+  "id_token": "eyJhbGc...",
+  "not-before-policy": 0,
+  "scope": "openid profile email"
+}
+```
+
+The values of `access_token` and `id_token` are JSON Web Tokens.
+These can be verified with then OpenID certificate endpoint
+at http://localhost:8080/realms/flame/protocol/openid-connect/certs
+if using the default "flame" realm name.
