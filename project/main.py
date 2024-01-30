@@ -5,36 +5,83 @@ import time
 import uuid
 
 import click
+from click import Context
 from jinja2 import Environment, PackageLoader, select_autoescape
 from keycloak import KeycloakOpenIDConnection, KeycloakAdmin, KeycloakOpenID
 
 
-@click.command(
-    context_settings={
-        "help_option_names": ["-h", "--help"],
-        "show_default": True,
-    }
-)
+@click.group()
 @click.option(
     "--kc-server-url",
     default="http://localhost:8080/",
     help="URL to Keycloak instance.",
 )
 @click.option(
-    "--kc-master-realm-name",
-    default="master",
-    help="Name of master realm within Keycloak.",
+    "--kc-realm-name",
+    "-r",
+    default="flame",
+    help="Name of realm within Keycloak to create.",
 )
 @click.option(
     "--verify/--no-verify",
     default=True,
     help="Enable certificate validation for encrypted traffic.",
 )
+@click.pass_context
+def cli(ctx: Context, kc_server_url: str, kc_realm_name: str, verify: bool):
+    ctx.ensure_object(dict)
+    ctx.obj["kc_server_url"] = kc_server_url
+    ctx.obj["kc_realm_name"] = kc_realm_name
+    ctx.obj["verify"] = verify
+
+
+@cli.command()
 @click.option(
-    "--kc-realm-name",
-    "-r",
-    default="flame",
-    help="Name of realm within Keycloak to create.",
+    "--token-type",
+    "-t",
+    default="access",
+    type=click.Choice(["access", "id"]),
+    help="Type of token to return.",
+)
+@click.argument("kc_client_id", metavar="CLIENT_ID")
+@click.argument("kc_client_secret", metavar="CLIENT_SECRET")
+@click.pass_context
+def token(
+    ctx: Context,
+    token_type: str,
+    kc_client_id: str,
+    kc_client_secret: str,
+):
+    kc_server_url = ctx.obj["kc_server_url"]
+    kc_realm_name = ctx.obj["kc_realm_name"]
+    verify = ctx.obj["verify"]
+
+    kc_client_oid = KeycloakOpenID(
+        server_url=kc_server_url,
+        realm_name=kc_realm_name,
+        client_id=kc_client_id,
+        client_secret_key=kc_client_secret,
+        verify=verify,
+    )
+
+    token = kc_client_oid.token(grant_type="client_credentials")
+
+    match token_type:
+        case "access":
+            token_prop = "access_token"
+        case "id":
+            token_prop = "id_token"
+        case _:
+            raise ValueError(f"unknown token type `{token_type}`")
+
+    print(token[token_prop])
+
+
+@cli.command()
+@click.option(
+    "--kc-master-realm-name",
+    default="master",
+    help="Name of master realm within Keycloak.",
 )
 @click.option(
     "--kc-client-name",
@@ -45,17 +92,20 @@ from keycloak import KeycloakOpenIDConnection, KeycloakAdmin, KeycloakOpenID
 )
 @click.argument("kc_admin_username", metavar="ADMIN_USERNAME")
 @click.argument("kc_admin_password", metavar="ADMIN_PASSWORD")
-def setup_keycloak(
+@click.pass_context
+def run(
+    ctx: Context,
     kc_admin_username: str,
     kc_admin_password: str,
-    kc_server_url: str,
     kc_master_realm_name: str,
-    kc_realm_name: str,
     kc_client_name: list[str],
-    verify: bool,
 ) -> None:
     def _uuid4() -> str:
         return str(uuid.uuid4())
+
+    kc_server_url = ctx.obj["kc_server_url"]
+    kc_realm_name = ctx.obj["kc_realm_name"]
+    verify = ctx.obj["verify"]
 
     # set up jinja env
     env = Environment(
@@ -138,6 +188,7 @@ def setup_keycloak(
         )
 
         auth_token = kc_client_oid.token(grant_type="client_credentials")
+
         assert auth_token is not None
 
         kc_clients.append(
@@ -166,4 +217,4 @@ def setup_keycloak(
 
 
 if __name__ == "__main__":
-    setup_keycloak()
+    cli(obj={})

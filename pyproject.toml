@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{ include = "project" }]
 
 [tool.poetry.scripts]
-kcsetup = "project.main:setup_keycloak"
+kcsetup = "project.main:cli"
 
 [tool.poetry.dependencies]
 python = "^3.11"
