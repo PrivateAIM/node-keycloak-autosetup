@@ -2,9 +2,22 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:23.0.4
+    env_file:
+      - .env
     environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HEALTH_ENABLED=true
     ports:
       - "8080:8080"
     command: [ "start-dev" ]
+
+  keycloak-setup:
+    build: ../
+    env_file:
+      - .env
+    volumes:
+      - ./entrypoint.sh:/app/entrypoint.sh
+    entrypoint: ["/bin/sh", "/app/entrypoint.sh"]
+    # Keep this empty to let the tool create the default realm with one client.
+    command: ""
+    # Otherwise use this line to fine-tune how you'd like the tool to behave, e.g. create three separate clients.
+    # command: "--kc-server-url http://keycloak:8080 --no-verify run -c foo -c bar -c baz admin admin"
