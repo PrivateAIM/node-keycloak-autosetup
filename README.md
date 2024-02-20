@@ -123,3 +123,32 @@ token generation command.
 Both tokens contain standard JWT properties and the client ID itself.
 Access tokens contain Keycloak-related information such as realm and resource access.
 ID tokens contain identifying information about the client itself.
+
+### With Docker
+
+This repository contains a Dockerfile which allows you to build this tool with Docker yourself.
+Simply run `docker build -t kcsetup:dev .`.
+You can then use the command line tool with `docker run --rm kcsetup:dev`.
+If no further arguments are specified, the above command will give you the output of `kcsetup --help`.
+
+All other commands work as expected.
+Be aware that since the tool runs in a container, it needs the IP of the default Docker bridge network gateway to
+communicate with Keycloak running on your host.
+You can get the IP using the following one-liner, given that you have `jq` installed on your system.
+
+```
+$ docker network inspect -f json bridge | jq '.[].IPAM.Config[].Gateway'
+"172.17.0.1"
+```
+
+Creating a client with this tool in Docker is done with the following command.
+
+```
+$ docker run --rm kcsetup:dev --kc-server-url http://172.17.0.1:8080 --no-verify run admin admin
+INFO:kcsetup:Read realm payload, creating new realm `flame` (b00db0b6-07c1-4444-9740-e3f1330367b7)
+INFO:kcsetup:Realm successfully created
+INFO:kcsetup:Read client payload, creating new client `flame-client`
+INFO:kcsetup:Client successfully created
+INFO:kcsetup:Authentication successful
+...
+```
