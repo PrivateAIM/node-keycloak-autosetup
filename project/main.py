@@ -36,6 +36,40 @@ def cli(ctx: Context, kc_server_url: str, kc_realm_name: str, verify: bool):
 
 
 @cli.command()
+@click.pass_context
+def get_public_key(ctx: Context):
+    """
+    Retrieves the public key of a Keycloak for a specific realm.
+    """
+    kc_server_url = ctx.obj["kc_server_url"]
+    kc_realm_name = ctx.obj["kc_realm_name"]
+    verify = ctx.obj["verify"]
+    try:
+        # Connect to Keycloak OpenID without login
+        kc_client_oid = KeycloakOpenID(
+            server_url=kc_server_url,
+            realm_name=kc_realm_name,
+            verify=verify,
+            client_id="dummy_client_id",
+        )
+
+        # Fetching public key
+        public_key = kc_client_oid.public_key()
+
+        # Format key to PEM format
+        pem_public_key = "-----BEGIN PUBLIC KEY-----\n"
+        for i in range(0, len(public_key), 64):
+            pem_public_key += public_key[i : i + 64] + "\n"
+        pem_public_key += "-----END PUBLIC KEY-----"
+
+        click.echo(
+            f"Public Key for realm '{kc_realm_name}' in PEM format:\n{pem_public_key}"
+        )
+    except Exception as e:
+        click.echo(f"Failed to retrieve public key: {str(e)}")
+
+
+@cli.command()
 @click.option(
     "--token-type",
     "-t",
