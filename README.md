@@ -15,7 +15,21 @@ Run `poetry install`.
 
 ## Usage
 
-In a terminal, navigate to the [docker subdirectory](./docker) and run `docker compose up -d`.
+If all you want is to have a Keycloak instance with an automatically configured realm and client,
+navigate to the [docker subdirectory](./docker), run `cp .env.example .env` and then `docker compose up -d`.
+This will start Keycloak and run the tool in another container in parallel to set up a new realm.
+To obtain the client ID and secret, run `docker compose logs keycloak-setup` once the tool is done.
+Alternatively, you can run `docker compose logs -f keycloak-setup` to watch the tool output while it's running
+and retrieve the credentials as soon as they're available.
+
+If you want to generate multiple clients, refer to the inline comments in the respective
+[Docker Compose file](./docker/docker-compose.yml).
+Other options are described in this document.
+
+### Manual
+
+In a terminal, navigate to the [docker subdirectory](./docker), run `cp .env.example` and then
+`docker compose up -f docker-compose.dev.yml -d`.
 This will start a development instance of Keycloak on port 8080 of your machine.
 Next, change to the root directory and run `poetry shell`.
 You can then run `kcsetup --help` to view the tool's options.
