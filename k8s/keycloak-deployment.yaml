@@ -81,23 +81,25 @@ spec:
             - /bin/sh
             - -c
             - |
+              set -eu;
               export PATH="$PATH:/opt/keycloak/bin";
               kc.sh start-dev &
+              echo "==> Waiting for Keycloak to start...";
               until kcadm.sh config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD";
               do
                 sleep 1;
               done;
-              echo "Initializing realm `$KEYCLOAK_INIT_REALM`";
+              echo "==> Initializing realm \`$KEYCLOAK_INIT_REALM\`...";
               kcadm.sh create realms -s realm="$KEYCLOAK_INIT_REALM" -s accessTokenLifespan=1800 -s enabled=true;
               while IFS="" read -r line || [ -n "$line" ];
               do
                 IFS=: read client_id client_secret <<< "$line";
-                echo "Creating client `$client_id`";
+                echo "==> Creating client \`$client_id\`...";
                 kcadm.sh create clients -r "$KEYCLOAK_INIT_REALM" -s enabled=true -s clientId="$client_id" -s secret="$client_secret" -s directAccessGrantsEnabled=true -s serviceAccountsEnabled=true;
               done < /etc/kc-init/kc-init-clients;
-              echo "Exporting...";
+              echo "==> Exporting...";
               kc.sh export --dir /etc/kc-realm-init --realm "$KEYCLOAK_INIT_REALM";
-              echo "Done!"
+              echo "==> Done!"
       volumes:
         - name: kc-init-volume
           secret:
