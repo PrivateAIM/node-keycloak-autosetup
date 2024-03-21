@@ -1,13 +1,13 @@
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
-  name: keycloak-init-creds
-data:
-  kc_admin_username: "admin"
-  kc_admin_password: "admin"
-  kc_init_realm_name: "flame"
-  kc_init_clients: |
+  name: kc-admin-secret
+stringData:
+  kc-admin-password: "admin"
+  kc-admin-username: "admin"
+  kc-init-realm: "flame"
+  kc-init-clients: |
     service1:9dd01665c2f3f02f93c32d03bd854569f03cd62f439ccf9f0861c141b9d6330e
     service2:40e4abf259cffe49527ed7cbaca3c9c4ed4f77cc100372789d6679969802b4fe
 ---
@@ -37,63 +37,70 @@ spec:
               value: "true"
             - name: KEYCLOAK_ADMIN
               valueFrom:
-                configMapKeyRef:
-                  key: kc_admin_username
-                  name: keycloak-init-creds
+                secretKeyRef:
+                  key: kc-admin-username
+                  name: kc-admin-secret
             - name: KEYCLOAK_ADMIN_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  key: kc_admin_password
-                  name: keycloak-init-creds
+                secretKeyRef:
+                  key: kc-admin-password
+                  name: kc-admin-secret
             - name: KC_PROXY
               value: "edge"
-          args: ["start-dev"]
-        - name: keycloak-sidecar
+          args: ["start-dev", "--import-realm"]
+          volumeMounts:
+            - mountPath: "/opt/keycloak/data/import"
+              name: kc-realm-init-volume
+      initContainers:
+        - name: keycloak-service-init
           image: quay.io/keycloak/keycloak:23.0.4
+          imagePullPolicy: IfNotPresent
           env:
             - name: KEYCLOAK_ADMIN
               valueFrom:
-                configMapKeyRef:
-                  key: kc_admin_username
-                  name: keycloak-init-creds
+                secretKeyRef:
+                  key: kc-admin-username
+                  name: kc-admin-secret
             - name: KEYCLOAK_ADMIN_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  key: kc_admin_password
-                  name: keycloak-init-creds
+                secretKeyRef:
+                  key: kc-admin-password
+                  name: kc-admin-secret
             - name: KEYCLOAK_INIT_REALM
               valueFrom:
-                configMapKeyRef:
-                  key: kc_init_realm_name
-                  name: keycloak-init-creds
+                secretKeyRef:
+                  key: kc-init-realm
+                  name: kc-admin-secret
           volumeMounts:
-            - mountPath: "/cfg"
-              name: client-config
+            - mountPath: "/etc/kc-init"
+              name: kc-init-volume
               readOnly: true
+            - mountPath: "/etc/kc-realm-init"
+              name: kc-realm-init-volume
           command:
             - /bin/sh
             - -c
             - |
-              export PATH="$PATH:/opt/keycloak/bin"
-              echo "Waiting for Keycloak to be ready";
-              until kcadm.sh config credentials --server http://keycloak-service:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD";
+              export PATH="$PATH:/opt/keycloak/bin";
+              kc.sh start-dev &
+              until kcadm.sh config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD";
               do
-                sleep 5;
+                sleep 1;
               done;
-              echo "Initializing realm $KEYCLOAK_INIT_REALM if it doesn't exist yet";
-              kcadm.sh create realms -s realm="$KEYCLOAK_INIT_REALM" -s enabled=true;
+              echo "Initializing realm `$KEYCLOAK_INIT_REALM`";
+              kcadm.sh create realms -s realm="$KEYCLOAK_INIT_REALM" -s accessTokenLifespan=1800 -s enabled=true;
               while IFS="" read -r line || [ -n "$line" ];
               do
                 IFS=: read client_id client_secret <<< "$line";
-                echo "Creating client $client_id";
+                echo "Creating client `$client_id`";
                 kcadm.sh create clients -r "$KEYCLOAK_INIT_REALM" -s enabled=true -s clientId="$client_id" -s secret="$client_secret" -s directAccessGrantsEnabled=true -s serviceAccountsEnabled=true;
-              done < /cfg/kc_init_clients;
-              echo "Done, sleeping forever...";
-              while true; do sleep 10000; done
+              done < /etc/kc-init/kc-init-clients;
+              echo "Exporting...";
+              kc.sh export --dir /etc/kc-realm-init --realm "$KEYCLOAK_INIT_REALM";
+              echo "Done!"
       volumes:
-        - name: client-config
-          configMap:
-            name: keycloak-init-creds
-            items:
-              - key: "kc_init_clients"
-                path: "kc_init_clients"
+        - name: kc-init-volume
+          secret:
+            secretName: kc-admin-secret
+        - name: kc-realm-init-volume
+          emptyDir: {}
