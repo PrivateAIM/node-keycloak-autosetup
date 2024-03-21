@@ -16,14 +16,14 @@ $ kubectl apply -f ./keycloak-service.yaml
 
 ## Configure realm and clients
 
-The [Keycloak deployment file](keycloak-deployment.yaml) contains a config map which sets up
+The [Keycloak deployment file](keycloak-deployment.yaml) contains secrets which set up
 initial access credentials, the default realm and clients.
-Applying the deployment will spawn two pods: one running Keycloak and one using the Keycloak Admin
-CLI to configure Keycloak before sleeping indefinitely.
+Applying the deployment will spawn an init container which generates a realm file and
+puts it in the main container's import directory.
 
-To change the admin credentials, modify `kc_admin_username` and `kc_admin_username`.
-To change the default realm name, modify `kc_init_realm_name`.
-To add or remove clients, modify `kc_init_clients`.
+To change the admin credentials, modify `kc-admin-username` and `kc-admin-password`.
+To change the default realm name, modify `kc-init-realm`.
+To add or remove clients, modify `kc-init-clients`.
 Entries of this key must be formatted as `<client_id>:<client_secret>`.
 
 ## Fetching access tokens
